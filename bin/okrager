@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+import argparse
+import shutil
+import os
+import struct
+import sys
+from okrager.mymc import MyMC
+from okrager.injector import Injector
+from okrager.logger import Logger, Verbosity
+from okrager.exceptions import OkragerException
+from psu.psu import PSU
+
+if sys.version_info < (3, 9):
+    import importlib_resources
+else:
+    import importlib.resources as importlib_resources
+
+def readBinaryFile(filepath):
+    """Read the given filepath as a byte stream and return it.
+
+    Args:
+        filepath (str): The filepath to the file being read.
+
+    Returns:
+        bytes: The bytes read from the file.
+    """
+    with open(filepath, 'rb') as f:
+        return f.read()
+
+def main(args):
+    # Verbosity
+    if args.verbosity == 'none':
+        Logger.VERBOSITY = Verbosity.NONE
+    elif args.verbosity == 'minimum':
+        Logger.VERBOSITY = Verbosity.MINIMUM
+    elif args.verbosity == 'debug':
+        Logger.VERBOSITY = Verbosity.DEBUG
+
+    Logger.info(Verbosity.NORMAL, f'Loading stagers and ELF')
+
+    # Default stager files from resources
+    resources = importlib_resources.files("okrager")
+
+    # Read ELF
+    elf = readBinaryFile(f'{args.elf}')
+
+    # Read stage1 shellcode
+    stage1Filepath = args.stage1 if args.stage1 != None else resources / "stagers" / "bin" / "stage1.bin"
+    stage1 = readBinaryFile(f'{stage1Filepath}')
+
+    # Read stage2 shellcode & data
+    stage2Filepath = args.stage2 if args.stage2 != None else resources / "stagers" / "bin" / "stage2.bin"
+    stage2 = readBinaryFile(f'{stage2Filepath}')
+
+    # Memory Card
+    Logger.info(Verbosity.NORMAL, f'Loading memory card')
+    mymc = MyMC(args.input)
+
+    # Validate given save name exists in saves
+    if not mymc.has(args.code):
+        Logger.error(Verbosity.MINIMUM, f'Could not find "{args.code}" in save!')
+        return 1
+
+    # Copy input file to output
+    shutil.copy(args.input, args.output)
+
+    # Change MyMC file to output
+    mymc.file = args.output
+
+    # Export psu
+    Logger.info(Verbosity.NORMAL, f'Exporting {args.code}')
+    if os.path.exists(f'{args.code}.psu'):
+        os.remove(f'{args.code}.psu')
+    mymc.export(args.code)
+
+    # Read psu
+    Logger.info(Verbosity.NORMAL, f'Reading {args.code}.psu')
+    psu = PSU.load(f'{args.code}.psu')
+
+    # Get dat files
+    files = []
+    for i in range(0, 3):
+        filename = f'bkmo{i}.dat'
+        if psu.has(filename):
+            files.append(psu.get(filename))
+
+    # Validate we found some dat files
+    if len(files) == 0:
+        Logger.error(Verbosity.MINIMUM, f'No dat files found in save!')
+        return 2
+
+    # Use first profile we find multiple
+    file = files[0]
+    if len(files) > 1:
+        Logger.warning(Verbosity.MINIMUM, 'Multiple profiles found, using first profile')
+
+    Logger.info(Verbosity.NORMAL, f'Modifying {file.name}')
+    try:
+        # Inject stage 1 and stage 2 to bkmo{i}.dat
+        file.content = Injector.inject(file.content, stage1, stage2)
+        psu.write(file.name, file.content)
+    except OkragerException as e:
+        Logger.fatal(Verbosity.MINIMUM, 1, e)
+
+    # Add ELF file to game save
+    Logger.info(Verbosity.NORMAL, f'Writing ELF')
+    psu.write('program.elf', struct.pack('<I', len(elf)) + elf)
+
+    # Save file to disk
+    Logger.info(Verbosity.NORMAL, f'Saving {args.code}.psu')
+    psu.save()
+
+    # Remove existing save from file
+    Logger.info(Verbosity.NORMAL, f'Deleting {args.code}')
+    mymc.delete(args.code)
+
+    # Import modified psu save
+    Logger.info(Verbosity.NORMAL, f'Importing {args.code}.psu')
+    mymc.copy(args.code + '.psu')
+
+    # Remove .psu file from disk
+    os.remove(args.code + '.psu')
+
+    # Sucess message
+    Logger.success(Verbosity.MINIMUM, f'Exploit wrote to save file "{args.output}"')
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Generate an Okage Shadow King exploitation game save.')
+    parser.add_argument('input', help='The input .ps2/.card game save file.')
+    parser.add_argument('output', help='The exported .ps2/.card game save file.')
+    parser.add_argument('elf', help='The compiled PS2 ELF filepath to inject.')
+    parser.add_argument('-c', '--code', default='BASCUS-97129', help='The game save identifier code. (Default: BASCUS-97129)')
+    parser.add_argument('-s1', '--stage1', required=False, help='The stage 1 shellcode to be executed.')
+    parser.add_argument('-s2', '--stage2', required=False, help='The stage 2 shellcode to be executed.')
+    parser.add_argument('-v', '--verbosity', default='normal', choices=['none', 'minimum', 'normal', 'debug'], help='The script output verbosity mode. (Default: normal)')
+    main(parser.parse_args())
