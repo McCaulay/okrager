@@ -73,3 +73,13 @@ optional arguments:
 [#] Importing BASCUS-97129.psu
 [+] Exploit wrote to save file "Mcd001-exploit.ps2"
 ~~~
+
+# References
+* <https://s3-eu-west-1.amazonaws.com/downloads-mips/documents/MIPS_Architecture_MIPS64_InstructionSet_%20AFP_P_MD00087_06.05.pdf>
+* <https://shell-storm.org/online/Online-Assembler-and-Disassembler/>
+* <https://github.com/beardypig/ghidra-emotionengine>
+* <https://github.com/ps2dev/ps2sdk>
+* <https://github.com/ps2dev/ps2toolchain>
+* <https://github.com/ps2dev/mymc>
+* <https://playstationdev.wiki/ps2devwiki/index.php/Main_Page>
+* <https://www.copetti.org/writings/consoles/playstation-2/>
