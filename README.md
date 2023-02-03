@@ -81,5 +81,7 @@ optional arguments:
 * <https://github.com/ps2dev/ps2sdk>
 * <https://github.com/ps2dev/ps2toolchain>
 * <https://github.com/ps2dev/mymc>
+* <https://pypi.org/project/mymcplus/>
+* <https://git.sr.ht/~thestr4ng3r/mymcplus>
 * <https://playstationdev.wiki/ps2devwiki/index.php/Main_Page>
 * <https://www.copetti.org/writings/consoles/playstation-2/>
