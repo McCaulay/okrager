@@ -8,8 +8,8 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-build.sh
-upload.sh
+/build.sh
+/upload.sh
 build/
 develop-eggs/
 dist/

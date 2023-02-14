@@ -5,6 +5,8 @@ The "okrager" console application allows you to generate an exploitable [Okage: 
 
 The application requires you to pass an existing input memory card file (.ps2/.card). Next, it injects the staging shellcode and the supplied PS2 ELF then saves the game save as a new output file (.ps2/.card).
 
+For additional information on the inner working of this application, see the assosicated blog post "[mast1c0re: Part 2 - Arbitrary PS2 code execution](https://mccaulay.co.uk/mast1c0re-part-2-arbitrary-ps2-code-execution/)".
+
 ## Installation
 
 Use the following command to install the okrager package with pip:
